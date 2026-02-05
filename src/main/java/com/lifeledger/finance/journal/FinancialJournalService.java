@@ -3,13 +3,16 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.util.List;
-import java.util.stream.Collectors;
+
 
 import com.lifeledger.exception.BadRequestException;
 import com.lifeledger.exception.ConflictException;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+
 @Service
 @RequiredArgsConstructor
 
@@ -68,11 +71,16 @@ public class FinancialJournalService {
     }
 
     @Transactional(readOnly = true)
-    public List<ResponseJournalEntryDTO> getEntriesByDateRange(
+    public Page<ResponseJournalEntryDTO> getEntriesByDateRange(
             String userEmail,
             LocalDate startDate,
-            LocalDate endDate
+            LocalDate endDate,
+            int page,
+            int size,
+            String sortBy,
+            String direction
     ) {
+
         if (startDate == null || endDate == null) {
             throw new BadRequestException("Start date and end date are required");
         }
@@ -80,16 +88,22 @@ public class FinancialJournalService {
         if (startDate.isAfter(endDate)) {
             throw new ConflictException("Start date cannot be after end date");
         }
-        List<FinancialJournalEntity> entities =
-                journalRepository.findByUserEmailAndEntryDateBetween(
+
+        Sort sort = direction.equalsIgnoreCase("asc")
+                ? Sort.by(sortBy).ascending()
+                : Sort.by(sortBy).descending();
+
+        PageRequest pageable = PageRequest.of(page, size, sort);
+
+        return journalRepository
+                .findByUserEmailAndEntryDateBetween(
                         userEmail,
                         startDate,
-                        endDate
-                );
-
-        return entities.stream()
+                        endDate,
+                        pageable
+                )
                 .map(entity -> {
-                	ResponseJournalEntryDTO dto = new ResponseJournalEntryDTO();
+                    ResponseJournalEntryDTO dto = new ResponseJournalEntryDTO();
                     dto.setId(entity.getId());
                     dto.setEntryDate(entity.getEntryDate());
                     dto.setCategory(entity.getCategory());
@@ -99,8 +113,7 @@ public class FinancialJournalService {
                     dto.setPaymentType(entity.getPaymentType());
                     dto.setCreatedAt(entity.getCreatedAt());
                     return dto;
-                })
-                .collect(Collectors.toList());
+                });
     }
 
     @Transactional

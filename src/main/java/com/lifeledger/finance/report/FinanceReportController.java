@@ -30,16 +30,17 @@ public class FinanceReportController {
     ) {
         return reportService.getDailyReport(userEmail(), date);
     }
-    @GetMapping("/range")
-    public RangeReport range(
+    @GetMapping("/summary")
+    public FinanceSummaryDTO summary(
             @RequestParam LocalDate startDate,
             @RequestParam LocalDate endDate
     ) {
-        return reportService.getRangeReport(
+        return reportService.getSummary(
                 userEmail(), startDate, endDate
         );
     }
-}
 
+}
+    
 
 

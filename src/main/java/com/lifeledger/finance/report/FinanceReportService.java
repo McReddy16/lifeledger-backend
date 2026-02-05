@@ -42,6 +42,7 @@ public class FinanceReportService {
         dto.setDate(date.toString());
         dto.setTotalIn(totalIn);
         dto.setTotalOut(totalOut);
+        dto.setNet(totalIn - totalOut); 
 
         return dto;
     }
@@ -86,6 +87,33 @@ public class FinanceReportService {
 
         return report;
     }
+    @Transactional(readOnly = true)
+    public FinanceSummaryDTO getSummary(
+            String userEmail,
+            LocalDate startDate,
+            LocalDate endDate
+    ) {
+
+        List<FinancialJournalEntity> entries =
+                journalRepository.findByUserEmailAndEntryDateBetween(
+                        userEmail, startDate, endDate
+                );
+
+        double totalIn = entries.stream()
+                .filter(e -> e.getMoneyFlow() == MoneyFlowEnum.IN)
+                .mapToDouble(FinancialJournalEntity::getAmount)
+                .sum();
+
+        double totalOut = entries.stream()
+                .filter(e -> e.getMoneyFlow() == MoneyFlowEnum.OUT)
+                .mapToDouble(FinancialJournalEntity::getAmount)
+                .sum();
+
+        FinanceSummaryDTO dto = new FinanceSummaryDTO();
+        dto.setTotalIn(totalIn);
+        dto.setTotalOut(totalOut);
+        dto.setNet(totalIn - totalOut);
+
+        return dto;
+    }
 }
-
-
