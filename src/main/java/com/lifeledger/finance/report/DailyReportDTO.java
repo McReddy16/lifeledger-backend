@@ -10,4 +10,5 @@ public class DailyReportDTO {
     private String date;
     private Double totalIn;
     private Double totalOut;
+    private Double net;
 }

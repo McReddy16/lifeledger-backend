@@ -14,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Arrays;
+import org.springframework.data.domain.Page;
 
 
 @RestController
@@ -42,33 +43,36 @@ public class FinancialJournalController {
     return new ResponseEntity<>(response, HttpStatus.CREATED);
 }
     @GetMapping("/range")
-    public ResponseEntity<List<ResponseJournalEntryDTO>> getEntriesByDateRange(
+    public ResponseEntity<Page<ResponseJournalEntryDTO>> getEntriesByDateRange(
             @RequestParam
-            @Schema(
-                example = "2026-01-28",
-                description = "Start date in yyyy-MM-dd format"
-            )
+            @Schema(example = "2026-01-28", description = "Start date in yyyy-MM-dd format")
             LocalDate startDate,
 
             @RequestParam
-            @Schema(
-                example = "2026-01-28",
-                description = "End date in yyyy-MM-dd format"
-            )
-            LocalDate endDate
-    )
+            @Schema(example = "2026-01-28", description = "End date in yyyy-MM-dd format")
+            LocalDate endDate,
 
-    {
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "desc") String direction
+    ) {
         String userEmail = getLoggedInUserEmail();
-        List<ResponseJournalEntryDTO> entries =
+
+        Page<ResponseJournalEntryDTO> entries =
                 journalService.getEntriesByDateRange(
                         userEmail,
                         startDate,
-                        endDate
+                        endDate,
+                        page,
+                        size,
+                        sortBy,
+                        direction
                 );
+
         return ResponseEntity.ok(entries);
     }
-    
+
     @GetMapping("/categories")
     public ResponseEntity<List<String>> getCategories() {
 
