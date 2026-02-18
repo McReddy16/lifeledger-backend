@@ -77,7 +77,21 @@ public class ReminderController {
 
 	    reminderService.deleteReminder(id, userEmail);
 	}
+    // ✅ PUT edit reminder description
+    @PutMapping("/{id}")
+    public ResponseReminderDTO updateReminderDescription(
+            @PathVariable Long id,
+            @RequestBody UpdateReminderDTO dto
+    ) {
+        String userEmail = SecurityContextHolder.getContext()
+                .getAuthentication()
+                .getName();
 
+        return reminderService.updateDescription(id, userEmail, dto);
+    }
+
+
+	
 
 
 }

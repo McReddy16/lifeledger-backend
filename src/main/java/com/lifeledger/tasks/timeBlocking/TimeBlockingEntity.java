@@ -6,14 +6,17 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Column;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
+
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 import lombok.Getter;
 import lombok.Setter;
 
 @Entity
-@Table(name="timeBlocking_tasks")
+@Table(name="time_blocking_tasks")
 @Setter
 @Getter
 public class TimeBlockingEntity {
@@ -43,7 +46,19 @@ public class TimeBlockingEntity {
     @Column(nullable=false)
 	private LocalDateTime updatedAt;
 	
-     
+    @Column(name = "start_task_date", nullable = false)
+    private LocalDate taskDate;
+
+    @Column(name = "start_time", nullable = false)
+    private LocalTime startTime;
+    
+    
+    @Column(name = "end_task_date", nullable = false)
+    private LocalDate endTaskDate;
+
+    @Column(name = "end_time", nullable = false)
+    private LocalTime endTime;
+  
 
 	
 }

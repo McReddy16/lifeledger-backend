@@ -1,14 +1,13 @@
 package com.lifeledger.finance.report;
 
-import lombok.Getter;
-import lombok.Setter;
+import lombok.Data;
+import java.math.BigDecimal;
 
-@Getter
-@Setter
+@Data
 public class DailyReportDTO {
 
     private String date;
-    private Double totalIn;
-    private Double totalOut;
-    private Double net;
+    private BigDecimal totalIn;
+    private BigDecimal totalOut;
+    private BigDecimal net;
 }

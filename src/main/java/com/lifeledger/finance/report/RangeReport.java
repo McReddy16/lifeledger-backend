@@ -1,20 +1,18 @@
 package com.lifeledger.finance.report;
 
-import lombok.Getter;
-import lombok.Setter;
-
+import lombok.Data;
+import java.math.BigDecimal;
 import java.util.Map;
 
-@Getter
-@Setter
+@Data
 public class RangeReport {
 
     private String startDate;
     private String endDate;
 
-    // category -> total amount
-    private Map<String, Double> categoryTotals;
+    private Map<String, BigDecimal> categoryTotals;
 
-    private Double totalIn;
-    private Double totalOut;
+    private BigDecimal totalIn;
+    private BigDecimal totalOut;
+    private BigDecimal net;
 }

@@ -63,4 +63,19 @@ public class TrackingController {
 
         trackingService.deleteTracking(id, userEmail);
     }
+    // ===============================
+    // PUT edit tracking description
+    // ===============================
+    @PutMapping("/{id}")
+    public ResponseTrackingDTO updateTrackingDescription(
+            @PathVariable Long id,
+            @RequestBody UpdateTrackingDTO dto
+    ) {
+        String userEmail = SecurityContextHolder.getContext()
+                .getAuthentication()
+                .getName();
+
+        return trackingService.updateDescription(id, userEmail, dto);
+    }
+
 }

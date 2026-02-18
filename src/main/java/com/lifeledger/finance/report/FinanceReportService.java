@@ -1,6 +1,5 @@
 package com.lifeledger.finance.report;
 
-
 import com.lifeledger.finance.journal.FinancialJournalEntity;
 import com.lifeledger.finance.journal.FinancialJournalRepository;
 import com.lifeledger.finance.journal.MoneyFlowEnum;
@@ -10,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -20,6 +20,11 @@ import java.util.stream.Collectors;
 public class FinanceReportService {
 
     private final FinancialJournalRepository journalRepository;
+
+    // ===============================
+    // DAILY REPORT
+    // ===============================
+
     @Transactional(readOnly = true)
     public DailyReportDTO getDailyReport(String userEmail, LocalDate date) {
 
@@ -28,24 +33,29 @@ public class FinanceReportService {
                         userEmail, date, date
                 );
 
-        double totalIn = entries.stream()
+        BigDecimal totalIn = entries.stream()
                 .filter(e -> e.getMoneyFlow() == MoneyFlowEnum.IN)
-                .mapToDouble(FinancialJournalEntity::getAmount)
-                .sum();
+                .map(FinancialJournalEntity::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        double totalOut = entries.stream()
+        BigDecimal totalOut = entries.stream()
                 .filter(e -> e.getMoneyFlow() == MoneyFlowEnum.OUT)
-                .mapToDouble(FinancialJournalEntity::getAmount)
-                .sum();
+                .map(FinancialJournalEntity::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         DailyReportDTO dto = new DailyReportDTO();
         dto.setDate(date.toString());
         dto.setTotalIn(totalIn);
         dto.setTotalOut(totalOut);
-        dto.setNet(totalIn - totalOut); 
+        dto.setNet(totalIn.subtract(totalOut));
 
         return dto;
     }
+
+    // ===============================
+    // RANGE REPORT
+    // ===============================
+
     @Transactional(readOnly = true)
     public RangeReport getRangeReport(
             String userEmail,
@@ -58,25 +68,27 @@ public class FinanceReportService {
                         userEmail, start, end
                 );
 
-        Map<String, Double> categoryTotals =
+        Map<String, BigDecimal> categoryTotals =
                 entries.stream()
                         .filter(e -> e.getMoneyFlow() == MoneyFlowEnum.OUT)
                         .collect(Collectors.groupingBy(
                                 FinancialJournalEntity::getCategory,
-                                Collectors.summingDouble(
-                                        FinancialJournalEntity::getAmount
+                                Collectors.reducing(
+                                        BigDecimal.ZERO,
+                                        FinancialJournalEntity::getAmount,
+                                        BigDecimal::add
                                 )
                         ));
 
-        double totalIn = entries.stream()
+        BigDecimal totalIn = entries.stream()
                 .filter(e -> e.getMoneyFlow() == MoneyFlowEnum.IN)
-                .mapToDouble(FinancialJournalEntity::getAmount)
-                .sum();
+                .map(FinancialJournalEntity::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        double totalOut = entries.stream()
+        BigDecimal totalOut = entries.stream()
                 .filter(e -> e.getMoneyFlow() == MoneyFlowEnum.OUT)
-                .mapToDouble(FinancialJournalEntity::getAmount)
-                .sum();
+                .map(FinancialJournalEntity::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         RangeReport report = new RangeReport();
         report.setStartDate(start.toString());
@@ -84,9 +96,15 @@ public class FinanceReportService {
         report.setCategoryTotals(categoryTotals);
         report.setTotalIn(totalIn);
         report.setTotalOut(totalOut);
+        report.setNet(totalIn.subtract(totalOut));
 
         return report;
     }
+
+    // ===============================
+    // SUMMARY REPORT
+    // ===============================
+
     @Transactional(readOnly = true)
     public FinanceSummaryDTO getSummary(
             String userEmail,
@@ -99,20 +117,20 @@ public class FinanceReportService {
                         userEmail, startDate, endDate
                 );
 
-        double totalIn = entries.stream()
+        BigDecimal totalIn = entries.stream()
                 .filter(e -> e.getMoneyFlow() == MoneyFlowEnum.IN)
-                .mapToDouble(FinancialJournalEntity::getAmount)
-                .sum();
+                .map(FinancialJournalEntity::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        double totalOut = entries.stream()
+        BigDecimal totalOut = entries.stream()
                 .filter(e -> e.getMoneyFlow() == MoneyFlowEnum.OUT)
-                .mapToDouble(FinancialJournalEntity::getAmount)
-                .sum();
+                .map(FinancialJournalEntity::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         FinanceSummaryDTO dto = new FinanceSummaryDTO();
         dto.setTotalIn(totalIn);
         dto.setTotalOut(totalOut);
-        dto.setNet(totalIn - totalOut);
+        dto.setNet(totalIn.subtract(totalOut));
 
         return dto;
     }

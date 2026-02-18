@@ -1,17 +1,18 @@
 package com.lifeledger.tasks.reminders;
+
 import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface ReminderRepository extends JpaRepository<ReminderEntity,Long> {
+public interface ReminderRepository extends JpaRepository<ReminderEntity, Long> {
 
-	// Fetch all reminder tasks for a specific user
-	// where deleted = false (soft-deleted tasks are excluded)
-	List<ReminderEntity> findByUserEmailAndDeletedFalse(String userEmail);
+    // Fetch all active reminders for user
+    List<ReminderEntity> findByUserEmailAndDeletedFalse(String userEmail);
 
+    // Fetch active reminder by id + user (secure + soft delete safe)
+    Optional<ReminderEntity> findByIdAndUserEmailAndDeletedFalse(Long id, String userEmail);
 
-    // Fetch a single reminder by id and user email (for security)
+    // (Optional) keep this if you still need it elsewhere
     Optional<ReminderEntity> findByIdAndUserEmail(Long id, String userEmail);
-
 }

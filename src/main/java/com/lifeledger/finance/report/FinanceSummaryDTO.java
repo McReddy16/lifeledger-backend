@@ -1,10 +1,12 @@
 package com.lifeledger.finance.report;
 
 import lombok.Data;
+import java.math.BigDecimal;
 
 @Data
 public class FinanceSummaryDTO {
-    private double totalIn;
-    private double totalOut;
-    private double net;
+
+    private BigDecimal totalIn;
+    private BigDecimal totalOut;
+    private BigDecimal net;
 }
