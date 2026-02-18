@@ -1,144 +1,90 @@
 package com.lifeledger.finance.journal;
 
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
-import io.swagger.v3.oas.annotations.media.Schema;
-
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
 import org.springframework.security.core.context.SecurityContextHolder;
-
-import lombok.RequiredArgsConstructor;
-
-import java.time.LocalDate;
-import java.util.List;
-import java.util.Arrays;
-import org.springframework.data.domain.Page;
-
 
 @RestController
 @RequestMapping("/api/finance/journal")
 @RequiredArgsConstructor
-@SecurityRequirement(name = "bearerAuth")
-
-
+@SecurityRequirement(name="bearerAuth")
 public class FinancialJournalController {
 
     private final FinancialJournalService journalService;
-    private String getLoggedInUserEmail() {
-        return SecurityContextHolder
-                .getContext()
-                .getAuthentication()
-                .getName();
-    }
-    @PostMapping("/add")
-    public ResponseEntity<ResponseJournalEntryDTO> addEntry(
-            @RequestBody RequestJournalEntryDTO request)
-    {
-    
-    String userEmail = getLoggedInUserEmail();
-    ResponseJournalEntryDTO response =
-            journalService.addEntry(request, userEmail);
-    return new ResponseEntity<>(response, HttpStatus.CREATED);
-}
-    @GetMapping("/range")
-    public ResponseEntity<Page<ResponseJournalEntryDTO>> getEntriesByDateRange(
-            @RequestParam
-            @Schema(example = "2026-01-28", description = "Start date in yyyy-MM-dd format")
-            LocalDate startDate,
 
-            @RequestParam
-            @Schema(example = "2026-01-28", description = "End date in yyyy-MM-dd format")
-            LocalDate endDate,
-
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "createdAt") String sortBy,
-            @RequestParam(defaultValue = "desc") String direction
-    ) {
-        String userEmail = getLoggedInUserEmail();
-
-        Page<ResponseJournalEntryDTO> entries =
-                journalService.getEntriesByDateRange(
-                        userEmail,
-                        startDate,
-                        endDate,
-                        page,
-                        size,
-                        sortBy,
-                        direction
-                );
-
-        return ResponseEntity.ok(entries);
+    private String getUser(){
+        return SecurityContextHolder.getContext().getAuthentication().getName();
     }
 
-    @GetMapping("/categories")
-    public ResponseEntity<List<String>> getCategories() {
+    // ================= CRUD =================
 
-        List<String> categories = Arrays.asList(
-                "FOOD",
-                "SALARY",
-                "TRAVEL",
-                "RENT",
-                "INVESTMENTS",
-                "ONLINESHOPPING",
-                "OFFLINESHOPPING",
-                "HELPINGHANDS",
-                "TEMPLE",
-                "SUPPLEMENTARYCREDITS",
-                "OTHER"
+    @PostMapping
+    public ResponseEntity<ResponseJournalEntryDTO> add(
+            @RequestBody RequestJournalEntryDTO req){
+        return new ResponseEntity<>(
+                journalService.addEntry(req,getUser()),
+                HttpStatus.CREATED
         );
-
-        return ResponseEntity.ok(categories);
-    }
-    @GetMapping("/money-flows")
-    public ResponseEntity<List<String>> getMoneyFlows() {
-
-        List<String> flows = Arrays.stream(MoneyFlowEnum.values())
-                                   .map(Enum::name)
-                                   .toList();
-
-        return ResponseEntity.ok(flows);
     }
 
-
-    @GetMapping("/payment-types")
-    public ResponseEntity<List<String>> getPaymentTypes() {
-
-        List<String> paymentTypes = Arrays.stream(PaymentTypeEnum.values())
-                                          .map(Enum::name)
-                                          .toList();
-
-        return ResponseEntity.ok(paymentTypes);
-    }
-    
-    @PutMapping("/update/{id}")
-    public ResponseEntity<ResponseJournalEntryDTO> updateEntry(
+    @PutMapping("/{id}")
+    public ResponseEntity<ResponseJournalEntryDTO> update(
             @PathVariable Long id,
-            @RequestBody RequestJournalEntryDTO request
-    ) {
-        String userEmail = getLoggedInUserEmail();
+            @RequestBody RequestJournalEntryDTO req){
 
-        ResponseJournalEntryDTO response =
-                journalService.updateEntry(id, request, userEmail);
-
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(
+                journalService.updateEntry(id,req,getUser())
+        );
     }
 
-    @DeleteMapping("/delete/{id}")
-    public ResponseEntity<Void> deleteEntry(@PathVariable Long id) {
-        String userEmail = getLoggedInUserEmail();
-
-        journalService.deleteEntry(id, userEmail);
-
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@PathVariable Long id){
+        journalService.deleteEntry(id,getUser());
         return ResponseEntity.noContent().build();
     }
 
+    // ================= SEARCH (MAIN API) =================
 
+    /**
+     * Unified filtering endpoint.
+     * Used for:
+     * - tables
+     * - charts
+     * - reports
+     */
+    @PostMapping("/search")
+    public ResponseEntity<?> search(
+            @RequestBody JournalSearchRequest request,
+            @RequestParam(defaultValue="0") int page,
+            @RequestParam(required = false) Integer size,
+            @RequestParam(defaultValue="entryDate") String sortBy,
+            @RequestParam(defaultValue="desc") String direction){
+
+        if (size == null || size == 0) {
+            return ResponseEntity.ok(
+                    journalService.searchAll(getUser(), request, sortBy, direction)
+            );
+        }
+
+        return ResponseEntity.ok(
+                journalService.search(
+                        getUser(), request, page, size, sortBy, direction
+                )
+        );
     }
 
-   
 
+    // ================= META DATA =================
 
-
+    /**
+     * Returns ALL dropdown info in one call.
+     */
+    @GetMapping("/meta")
+    public ResponseEntity<JournalMetaResponse> meta(){
+        return ResponseEntity.ok(journalService.getMeta());
+    }
+}

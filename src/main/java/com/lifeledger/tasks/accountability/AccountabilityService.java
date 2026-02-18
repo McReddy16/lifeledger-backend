@@ -8,6 +8,11 @@ import org.springframework.stereotype.Service;
 import lombok.RequiredArgsConstructor;
 
 import com.lifeledger.exception.ResourceNotFoundException;
+import com.lifeledger.tasks.reminders.ReminderEntity;
+import com.lifeledger.tasks.reminders.ReminderRepository;
+import com.lifeledger.tasks.reminders.ResponseReminderDTO;
+import com.lifeledger.tasks.reminders.UpdateReminderDTO;
+import com.lifeledger.tasks.tracking.TrackingEntity;
 
 @Service
 @RequiredArgsConstructor
@@ -75,4 +80,33 @@ public class AccountabilityService {
         accountability.setDeleted(true);
         accountabilityRepository.save(accountability);
     }
+
+
+ // ✅ EDIT accountability task text
+    public ResponseAccountabilityDTO updateDescription(
+            Long id,
+            String userEmail,
+            UpdateAccountabilityDTO dto
+    ) {
+        AccountabilityEntity task =
+                accountabilityRepository
+                        .findByIdAndUserEmailAndDeletedFalse(id, userEmail)
+                        .orElseThrow(() ->
+                                new ResourceNotFoundException("Accountability task not found"));
+
+        if (dto.getDescription() == null || dto.getDescription().trim().isEmpty()) {
+            throw new IllegalArgumentException("Task text cannot be empty");
+        }
+
+        // description maps to taskText
+        task.setTaskText(dto.getDescription());
+
+        return mapToResponse(accountabilityRepository.save(task));
+    }
+    
+    public List<AccountabilityEntity> getAllForUser(String userEmail) {
+        return accountabilityRepository.findByUserEmailAndDeletedFalse(userEmail);
+    }
+
 }
+

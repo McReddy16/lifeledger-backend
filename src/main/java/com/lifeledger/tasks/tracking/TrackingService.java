@@ -75,4 +75,30 @@ public class TrackingService {
         tracking.setDeleted(true);
         trackingRepository.save(tracking);
     }
+ // ✅ EDIT tracking task description
+    public ResponseTrackingDTO updateDescription(
+            Long id,
+            String userEmail,
+            UpdateTrackingDTO dto
+    ) {
+        TrackingEntity task =
+                trackingRepository
+                        .findByIdAndUserEmailAndDeletedFalse(id, userEmail)
+                        .orElseThrow(() ->
+                                new ResourceNotFoundException("Tracking task not found"));
+
+        if (dto.getDescription() == null || dto.getDescription().trim().isEmpty()) {
+            throw new IllegalArgumentException("Task text cannot be empty");
+        }
+
+        // description maps to taskText
+        task.setTaskText(dto.getDescription());
+
+        return mapToResponse(trackingRepository.save(task));
+    }
+ 
+    public List<TrackingEntity> getAllForUser(String userEmail) {
+        return trackingRepository.findByUserEmailAndDeletedFalse(userEmail);
+    }
+
 }

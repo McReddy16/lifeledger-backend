@@ -37,6 +37,9 @@ public class SecurityConfig {
                 // Finance APIs 
                 .requestMatchers("/api/finance/**")
                 .authenticated()
+                
+                //api dashboard
+                .requestMatchers("/api/dashboard/**").authenticated()
 
                 // Everything else
                 .anyRequest().authenticated()

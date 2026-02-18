@@ -5,6 +5,9 @@ import java.util.List;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+import com.lifeledger.tasks.reminders.ResponseReminderDTO;
+import com.lifeledger.tasks.reminders.UpdateReminderDTO;
+
 import lombok.RequiredArgsConstructor;
 
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -63,4 +66,18 @@ public class AccountabilityController {
 
         accountabilityService.deleteAccountability(id, userEmail);
     }
+    
+ // ✅ PUT edit Accountability description
+    @PutMapping("/{id}")
+    public ResponseAccountabilityDTO updateAccountabilityDescription(
+            @PathVariable Long id,
+            @RequestBody UpdateAccountabilityDTO dto
+    ) {
+        String userEmail = SecurityContextHolder.getContext()
+                .getAuthentication()
+                .getName();
+
+        return accountabilityService.updateDescription(id, userEmail, dto);
+    }
 }
+

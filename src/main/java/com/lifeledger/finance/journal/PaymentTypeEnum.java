@@ -5,5 +5,7 @@ public enum PaymentTypeEnum {
 	    UPI,
 	    CASH,
 	    CARD,
-	    NET_BANKING
+	    NETBANKING,
+	    BANKTRANSFER
+	    
 }

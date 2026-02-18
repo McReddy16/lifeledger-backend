@@ -1,84 +1,102 @@
 package com.lifeledger.tasks.reminders;
+
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
-import lombok.*;
+
+import lombok.RequiredArgsConstructor;
+
 import com.lifeledger.exception.ResourceNotFoundException;
-import java.util.stream.Collectors;
-import com.lifeledger.tasks.reminders.RequestReminderDTO;
-import com.lifeledger.tasks.reminders.ResponseReminderDTO;
-
-
+import com.lifeledger.tasks.tracking.TrackingEntity;
 
 @Service
 @RequiredArgsConstructor
 public class ReminderService {
-	
-	private final ReminderRepository reminderRepository;
-	
-	// Convert ReminderEntity to ResponseReminderDTO
-	private ResponseReminderDTO mapToResponse(ReminderEntity reminder) {
 
-	    ResponseReminderDTO dto = new ResponseReminderDTO();
-	    dto.setId(reminder.getId());
-	    dto.setTaskText(reminder.getTaskText());
-	    dto.setCompleted(reminder.isCompleted());
-	    dto.setCreatedAt(reminder.getCreatedAt());
-	    return dto;
-	}
+    private final ReminderRepository reminderRepository;
 
-	
-	// Fetch all active reminders for a logged-in user (DTO response)
-	public List<ResponseReminderDTO> getRemindersForUser(String userEmail) {
+    // Convert entity → response DTO
+    private ResponseReminderDTO mapToResponse(ReminderEntity reminder) {
 
-	    return reminderRepository
-	            .findByUserEmailAndDeletedFalse(userEmail)
-	            .stream()
-	            .map(this::mapToResponse)
-	            .collect(Collectors.toList());
-	}
+        ResponseReminderDTO dto = new ResponseReminderDTO();
+        dto.setId(reminder.getId());
+        dto.setTaskText(reminder.getTaskText());
+        dto.setCompleted(reminder.isCompleted());
+        dto.setCreatedAt(reminder.getCreatedAt());
+        return dto;
+    }
 
-	// Create a new reminder and return DTO
-	public ResponseReminderDTO createReminder(
-	        String userEmail,
-	        RequestReminderDTO request
-	) {
+    // Fetch all active reminders for user
+    public List<ResponseReminderDTO> getRemindersForUser(String userEmail) {
 
-	    ReminderEntity reminder = new ReminderEntity();
-	    reminder.setUserEmail(userEmail);
-	    reminder.setTaskText(request.getTaskText());
+        return reminderRepository
+                .findByUserEmailAndDeletedFalse(userEmail)
+                .stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
 
-	    ReminderEntity saved = reminderRepository.save(reminder);
-	    return mapToResponse(saved);
-	}
-	
-	// Toggle completed flag and return updated DTO
-	public ResponseReminderDTO toggleCompleted(Long id, String userEmail) {
+    // Create reminder
+    public ResponseReminderDTO createReminder(
+            String userEmail,
+            RequestReminderDTO request
+    ) {
+        ReminderEntity reminder = new ReminderEntity();
+        reminder.setUserEmail(userEmail);
+        reminder.setTaskText(request.getTaskText());
 
-	    ReminderEntity reminder =
-	            reminderRepository.findByIdAndUserEmail(id, userEmail)
-	                    .orElseThrow(() -> new ResourceNotFoundException("Reminder not found"));
+        return mapToResponse(reminderRepository.save(reminder));
+    }
 
-	    reminder.setCompleted(!reminder.isCompleted());
+    // Toggle completed
+    public ResponseReminderDTO toggleCompleted(Long id, String userEmail) {
 
-	    ReminderEntity updated = reminderRepository.save(reminder);
-	    return mapToResponse(updated);
-	}
+        ReminderEntity reminder =
+                reminderRepository.findByIdAndUserEmailAndDeletedFalse(id, userEmail)
+                        .orElseThrow(() ->
+                                new ResourceNotFoundException("Reminder not found"));
 
-	
-	// Soft delete a reminder for a user (do not remove from DB)
-	public void deleteReminder(Long id, String userEmail) {
+        reminder.setCompleted(!reminder.isCompleted());
 
-	    ReminderEntity reminder =
-	            reminderRepository.findByIdAndUserEmail(id, userEmail)
-	                    .orElseThrow(() -> new ResourceNotFoundException("Reminder not found"));
+        return mapToResponse(reminderRepository.save(reminder));
+    }
 
-	    reminder.setDeleted(true);
+    // Soft delete
+    public void deleteReminder(Long id, String userEmail) {
 
-	    reminderRepository.save(reminder);
-	}
+        ReminderEntity reminder =
+                reminderRepository.findByIdAndUserEmailAndDeletedFalse(id, userEmail)
+                        .orElseThrow(() ->
+                                new ResourceNotFoundException("Reminder not found"));
 
+        reminder.setDeleted(true);
+        reminderRepository.save(reminder);
+    }
 
+    // ✅ EDIT task text (description)
+    public ResponseReminderDTO updateDescription(
+            Long id,
+            String userEmail,
+            UpdateReminderDTO dto
+    ) {
+        ReminderEntity reminder =
+                reminderRepository.findByIdAndUserEmailAndDeletedFalse(id, userEmail)
+                        .orElseThrow(() ->
+                                new ResourceNotFoundException("Reminder not found"));
 
+        if (dto.getDescription() == null || dto.getDescription().trim().isEmpty()) {
+            throw new IllegalArgumentException("Task text cannot be empty");
+        }
+
+        // IMPORTANT: taskText is your description
+        reminder.setTaskText(dto.getDescription());
+
+        return mapToResponse(reminderRepository.save(reminder));
+    }
+    
+    public List<ReminderEntity> getAllForUser(String userEmail) {
+        return reminderRepository.findByUserEmailAndDeletedFalse(userEmail);
+    }
 
 }

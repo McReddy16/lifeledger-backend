@@ -7,6 +7,7 @@ import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -19,8 +20,8 @@ public class FinancialJournalEntity {
     // =========================
     // Primary Key
     // =========================
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     // =========================
@@ -47,7 +48,7 @@ public class FinancialJournalEntity {
 
     // Always POSITIVE (validated in Service layer)
     @Column(name = "amount", nullable = false)
-    private Double amount;
+    private BigDecimal amount;
 
     // =========================
     // Enums
@@ -70,4 +71,10 @@ public class FinancialJournalEntity {
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
+    
+    
+    @Enumerated(EnumType.STRING)
+    @Column(name = "transaction_type", nullable = false)
+    private TransactionTypeEnum transactionType;
+
 } 

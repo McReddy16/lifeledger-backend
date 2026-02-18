@@ -1,5 +1,8 @@
 package com.lifeledger.tasks.timeBlocking;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -7,7 +10,9 @@ import org.springframework.stereotype.Service;
 
 import lombok.RequiredArgsConstructor;
 
+import com.lifeledger.exception.BadRequestException;
 import com.lifeledger.exception.ResourceNotFoundException;
+import com.lifeledger.tasks.tracking.TrackingEntity;
 
 @Service
 @RequiredArgsConstructor
@@ -15,7 +20,6 @@ public class TimeBlockingService {
 
     private final TimeBlockingRepository timeBlockingRepository;
 
-    // Convert TimeBlockingEntity to ResponseTimeBlockingDTO
     private ResponseTimeBlockingDTO mapToResponse(TimeBlockingEntity timeBlock) {
 
         ResponseTimeBlockingDTO dto = new ResponseTimeBlockingDTO();
@@ -23,10 +27,15 @@ public class TimeBlockingService {
         dto.setTaskText(timeBlock.getTaskText());
         dto.setCompleted(timeBlock.isCompleted());
         dto.setCreatedAt(timeBlock.getCreatedAt());
+        dto.setTaskDate(timeBlock.getTaskDate());
+        dto.setEndTaskDate(timeBlock.getEndTaskDate());
+        dto.setStartTime(timeBlock.getStartTime());
+        dto.setEndTime(timeBlock.getEndTime());
+        dto.setDeleted(timeBlock.isDeleted());
+
         return dto;
     }
 
-    // Fetch all active time blocks for a logged-in user
     public List<ResponseTimeBlockingDTO> getTimeBlocksForUser(String userEmail) {
 
         return timeBlockingRepository
@@ -36,43 +45,144 @@ public class TimeBlockingService {
                 .collect(Collectors.toList());
     }
 
-    // Create a new time block
+    /*
+     * CREATE
+     */
     public ResponseTimeBlockingDTO createTimeBlock(
             String userEmail,
-            RequestTimeBlockingDTO request
+            CreateTimeBlockingDTO request
     ) {
+
+        if (request.getDescription() == null ||
+            request.getDescription().trim().isEmpty()) {
+
+            throw new BadRequestException("Description cannot be empty");
+        }
+
+        validateTimeBlock(
+                request.getTaskDate(),
+                request.getStartTime(),
+                request.getEndTaskDate(),
+                request.getEndTime()
+        );
 
         TimeBlockingEntity timeBlock = new TimeBlockingEntity();
         timeBlock.setUserEmail(userEmail);
-        timeBlock.setTaskText(request.getTaskText());
+        timeBlock.setTaskText(request.getDescription());
+        timeBlock.setTaskDate(request.getTaskDate());
+        timeBlock.setEndTaskDate(request.getEndTaskDate());
+        timeBlock.setStartTime(request.getStartTime());
+        timeBlock.setEndTime(request.getEndTime());
+        timeBlock.setCompleted(false);
+        timeBlock.setDeleted(false);
 
-        TimeBlockingEntity saved = timeBlockingRepository.save(timeBlock);
-        return mapToResponse(saved);
+        return mapToResponse(timeBlockingRepository.save(timeBlock));
     }
 
-    // Toggle completed flag
+    /*
+     * UPDATE
+     */
+    public ResponseTimeBlockingDTO updateTimeBlock(
+            Long id,
+            String userEmail,
+            UpdateTimeBlockingDTO dto
+    ) {
+
+        TimeBlockingEntity task =
+                timeBlockingRepository
+                        .findByIdAndUserEmailAndDeletedFalse(id, userEmail)
+                        .orElseThrow(() ->
+                                new ResourceNotFoundException("Time block not found"));
+
+        if (dto.getTaskDate() == null ||
+            dto.getStartTime() == null ||
+            dto.getEndTaskDate() == null ||
+            dto.getEndTime() == null) {
+
+            throw new BadRequestException(
+                    "Start and end date/time are mandatory");
+        }
+
+        validateTimeBlock(
+                dto.getTaskDate(),
+                dto.getStartTime(),
+                dto.getEndTaskDate(),
+                dto.getEndTime()
+        );
+
+        if (dto.getDescription() != null &&
+            !dto.getDescription().trim().isEmpty()) {
+
+            task.setTaskText(dto.getDescription());
+        }
+
+        task.setTaskDate(dto.getTaskDate());
+        task.setEndTaskDate(dto.getEndTaskDate());
+        task.setStartTime(dto.getStartTime());
+        task.setEndTime(dto.getEndTime());
+
+        return mapToResponse(timeBlockingRepository.save(task));
+    }
+
+    /*
+     * VALIDATION (Cross-date aware)
+     */
+    private void validateTimeBlock(
+            LocalDate startDate,
+            LocalTime startTime,
+            LocalDate endDate,
+            LocalTime endTime
+    ) {
+
+        if (startDate == null || startTime == null ||
+            endDate == null || endTime == null) {
+
+            throw new BadRequestException("All date/time fields are required");
+        }
+
+        LocalDateTime startDateTime =
+                LocalDateTime.of(startDate, startTime);
+
+        LocalDateTime endDateTime =
+                LocalDateTime.of(endDate, endTime);
+
+        if (!endDateTime.isAfter(startDateTime)) {
+            throw new BadRequestException(
+                    "End date/time must be after start date/time");
+        }
+
+        if (startDateTime.isBefore(LocalDateTime.now())) {
+            throw new BadRequestException(
+                    "Cannot schedule event in the past");
+        }
+    }
+
     public ResponseTimeBlockingDTO toggleCompleted(Long id, String userEmail) {
 
-        TimeBlockingEntity timeBlock =
-                timeBlockingRepository.findByIdAndUserEmail(id, userEmail)
+        TimeBlockingEntity block =
+                timeBlockingRepository
+                        .findByIdAndUserEmailAndDeletedFalse(id, userEmail)
                         .orElseThrow(() ->
                                 new ResourceNotFoundException("Time block not found"));
 
-        timeBlock.setCompleted(!timeBlock.isCompleted());
+        block.setCompleted(!block.isCompleted());
 
-        TimeBlockingEntity updated = timeBlockingRepository.save(timeBlock);
-        return mapToResponse(updated);
+        return mapToResponse(timeBlockingRepository.save(block));
     }
 
-    // Soft delete (do not remove from DB)
     public void deleteTimeBlock(Long id, String userEmail) {
 
-        TimeBlockingEntity timeBlock =
-                timeBlockingRepository.findByIdAndUserEmail(id, userEmail)
+        TimeBlockingEntity block =
+                timeBlockingRepository
+                        .findByIdAndUserEmailAndDeletedFalse(id, userEmail)
                         .orElseThrow(() ->
                                 new ResourceNotFoundException("Time block not found"));
 
-        timeBlock.setDeleted(true);
-        timeBlockingRepository.save(timeBlock);
+        block.setDeleted(true);
+        timeBlockingRepository.save(block);
     }
+    public List<TimeBlockingEntity> getAllForUser(String userEmail) {
+        return timeBlockingRepository.findByUserEmailAndDeletedFalse(userEmail);
+    }
+
 }
